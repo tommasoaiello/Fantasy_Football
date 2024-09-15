@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Stats Search</title>
+    
+    <!-- Link to the external CSS file for role colors -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    
+    <style>
+        /* Basic table styling */
+        table {
+            margin: 20px auto;
+            border-collapse: collapse;
+            width: 80%;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        /* Error message styling */
+        .error {
+            color: red;
+            text-align: center;
+        }
+
+        /* Suggestion list styling */
+        .suggestions {
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .suggestion {
+            cursor: pointer;
+            padding: 5px;
+            background-color: #eee;
+            display: inline-block;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Search Player Stats</h1>
+
+<!-- Form to search for player by name -->
+<form id="playerForm">
+    <label for="playerName">Player Name:</label>
+    <input type="text" id="playerName" name="playerName" autocomplete="off" required>
+    <button type="submit">Search</button>
+</form>
+
+<!-- Suggestions will be displayed here -->
+<div class="suggestions" id="suggestions"></div>
+
+<!-- Player recap will be displayed here -->
+<div id="recap"></div>
+
+<!-- Player stats will be displayed here -->
+<div id="playerStats"></div>
+
+<script>
+document.getElementById('playerName').addEventListener('input', function() {
+    const query = this.value;
+    const suggestionsDiv = document.getElementById('suggestions');
+
+    if (query.length > 1) {
+        fetch(`/player_suggestions?query=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(suggestions => {
+                suggestionsDiv.innerHTML = '';
+                suggestions.forEach(suggestion => {
+                    const suggestionDiv = document.createElement('div');
+                    suggestionDiv.classList.add('suggestion');
+                    suggestionDiv.textContent = suggestion;
+                    suggestionDiv.onclick = () => {
+                        document.getElementById('playerName').value = suggestion;
+                        suggestionsDiv.innerHTML = '';
+                    };
+                    suggestionsDiv.appendChild(suggestionDiv);
+                });
+            });
+    } else {
+        suggestionsDiv.innerHTML = '';
+    }
+});
+
+document.getElementById('playerForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const playerName = document.getElementById('playerName').value;
+    const playerStatsDiv = document.getElementById('playerStats');
+    const recapDiv = document.getElementById('recap');
+
+    fetch(`/search_player?player_name=${encodeURIComponent(playerName)}`)
+        .then(response => response.json())
+        .then(data => {
+            playerStatsDiv.innerHTML = '';
+            recapDiv.innerHTML = '';
+
+            if (data.error) {
+                playerStatsDiv.innerHTML = `<p class="error">${data.error}</p>`;
+            } else {
+                // Function to assign role colors
+                const getRoleClass = (role) => {
+                    if (['P', 'Por'].includes(role)) {
+                        return 'yellow-orange';
+                    } else if (['D', 'Dd', 'Ds', 'Dc', 'B'].includes(role)) {
+                        return 'green';
+                    } else if (['C', 'E', 'M'].includes(role)) {
+                        return 'light-blue';
+                    } else if (['W', 'T'].includes(role)) {
+                        return 'violet';
+                    } else if (['A', 'Pc'].includes(role)) {
+                        return 'red';
+                    }
+                    return ''; // Default case if the role doesn't match any category
+                };
+
+                // Recap Section
+                let rmHtml = '';
+                const rmRoles = data.recap.Rm.split(';'); // Split multiple roles by ';'
+                rmRoles.forEach(role => {
+                    const roleClass = getRoleClass(role.trim()); // Trim and get the class for each role
+                    rmHtml += `<span class="${roleClass}">${role.trim()}</span> `; // Add each role with its class
+                });
+
+                const recap = `
+                    <h2>Recap for ${data.player}</h2>
+                    <p><strong>Nome:</strong> ${data.recap.Nome}</p>
+                    <p><strong>Squadra:</strong> ${data.recap.Squadra}</p>
+                    <p><strong>R:</strong> <span class="${getRoleClass(data.recap.R)}">${data.recap.R}</span></p>
+                    <p><strong>Rm:</strong> ${rmHtml}</p> <!-- Display colored roles here -->
+                    <p><strong>FVM:</strong> ${data.recap.FVM}</p>
+                    <p><strong>FVM_M:</strong> ${data.recap.FVM_M}</p>
+                `;
+                recapDiv.innerHTML = recap;
+
+                // Stats Section (order: Current Season, 2023/24, 2022/23, 2021/22)
+                const seasonsOrder = ['current', '2023_24', '2022_23', '2021_22'];
+
+                seasonsOrder.forEach(season => {
+                    if (data.stats[season]) {
+                        const seasonTitle = season === 'current' ? 'Current Season' : `Season ${season.replace('_', '/')}`;
+                        let html = `<h3>${seasonTitle}</h3>`;
+                        html += `<p><a href="${data.stats[season].link}" target="_blank">View detailed stats for ${seasonTitle}</a></p>`;
+                        html += '<table><tr>';
+                        
+                        // Create table headers in the correct order
+                        const columnsOrder = ['Pv', 'Mv', 'Fm', 'Gf','Ass', 'Squadra', 'Rc', 'R+', 'R-', 'Amm', 'Esp', 'Au', 'Gs','Rp'];
+                        columnsOrder.forEach(stat => {
+                            html += `<th>${stat}</th>`;
+                        });
+                        
+                        html += '</tr><tr>';
+                        
+                        // Create table data in the correct order
+                        columnsOrder.forEach(stat => {
+                            html += `<td>${data.stats[season][stat] !== null && data.stats[season][stat] !== undefined ? data.stats[season][stat] : ''}</td>`;
+                        });
+                        
+                        html += '</tr></table>';
+                        playerStatsDiv.innerHTML += html;
+                    }
+                });
+            }
+        })
+        .catch(err => {
+            playerStatsDiv.innerHTML = `<p class="error">Failed to fetch data: ${err}</p>`;
+        });
+});
+</script>
+
+</body>
+</html>

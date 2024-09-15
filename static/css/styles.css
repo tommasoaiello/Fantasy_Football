@@ -1,0 +1,81 @@
+/* static/css/styles.css */
+
+/* Colors for each role */
+.yellow-orange {
+    background-color: orange;
+    color: white;
+}
+
+.green {
+    background-color: green;
+    color: white;
+}
+
+.light-blue {
+    background-color: lightblue;
+    color: black;
+}
+
+.violet {
+    background-color: violet;
+    color: white;
+}
+
+.red {
+    background-color: red;
+    color: white;
+}
+
+/* Additional styles if needed */
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f7f7f7;
+}
+h1 {
+    text-align: center;
+}
+form {
+    text-align: center;
+    margin-bottom: 20px;
+}
+input[type="text"] {
+    padding: 8px;
+    margin-right: 10px;
+    width: 300px;
+}
+button {
+    padding: 8px 12px;
+}
+table {
+    margin: 20px auto;
+    border-collapse: collapse;
+    width: 80%;
+}
+table, th, td {
+    border: 1px solid #ddd;
+}
+th, td {
+    padding: 8px;
+    text-align: center;
+}
+th {
+    background-color: #4CAF50;
+    color: white;
+}
+.suggestions {
+    text-align: center;
+    margin-top: 10px;
+}
+.suggestion {
+    cursor: pointer;
+    padding: 5px;
+    background-color: #eee;
+    display: inline-block;
+    margin: 5px;
+}
+.error {
+    color: red;
+}
